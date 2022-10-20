@@ -11,7 +11,7 @@ Model fit parameters for vapor concentration of sensor 2 vs sensor 1.
 import statsmodels.api as sm # 0.12.0
 
 
-def modelfit(data, k_s1, k_s2):
+def fit(data, k_s1, k_s2):
     """    
     Model is a simple linear relationship of sensor 1 measurements as a 
     function of sensor 2. Line is constrained to pass through the origin. 
