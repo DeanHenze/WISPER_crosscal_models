@@ -74,7 +74,7 @@ import statsmodels.api as sm # 0.12.0
 # My modules:
 import oversampler
 import qxcal_model
-#import wisper_oracles_pic1cal as pic1cal
+import isoxcal_model
 
 
 
@@ -97,14 +97,11 @@ def get_wisperdata(year):
     """
     # Get paths to all data files for the input year:
     if year=='2017':
-        #dates_good = pic1cal.dates2017_good
         dates_good = dates2017_good
     elif year=='2018':
-        #dates_good = pic1cal.dates2018_good
         dates_good = dates2018_good
  
     path_data_dir = r"./sensor_data/"   
-    #path_data_dir = pic1cal.path_pic1caldir # directory with data files.
     fnames = ['WISPER_pic1cal_%s.ict' % d for d in dates_good]
     paths_data = [path_data_dir+f for f in fnames]
     
@@ -123,102 +120,6 @@ def get_wisperdata(year):
     return wisper.dropna(how='any') # Drop missing values
 
 
-#def qxcal_modelfit(df):
-#    """
-#    Fit a line to Pic1 vs Pic2 vapor concentration. Line is constrained to pass
-#    through the origin. 'df' is the pandas dataframe of wisper measurements.
-#    """
-#    return sm.OLS(df['h2o_tot1'], df['h2o_tot2'], missing='drop').fit()
-    
-    
-def get_poly_terms(predictvars, pwr_range):
-    """
-    Produces powers of predictor vars for a candidate model to use with 
-    statsmodels. 
-    
-    predictvars: pandas.DataFrame.
-        Contains predictor vars for model.
-    pwr_range: dict.
-        Keys are a subset of the columns in predictvars. Elements are 
-        2-tuples for min, max powers for that key. Powers can be negative.
-    """
-    modelvars = pd.DataFrame({}) # Will hold all vars to use with model.
-    
-    for key in pwr_range.keys():
-        # Powers (excluding 0) of predictor var to try:
-        powers = list(range(pwr_range[key][0],pwr_range[key][1]+1))
-        if 0 in powers: del powers[powers.index(0)]
-        
-        for i in powers: # Compute and append powers:
-            modelvars[key+'^%i' % i] = predictvars[key]**i
-            
-    # Add constant offset var:
-    modelvars['const'] = np.ones(len(predictvars))
-            
-    return modelvars
-    
-
-def isoxcal_modelfit(df, iso, nord):
-    """
-    Determine polynomial fit for isotope ratio cross-calibration data.
-    
-    Fit Pic1 isotope measurements to a polynomial of Pic2 log(q) and isotope 
-    measurements (either dD or d18O), including an interaction term. Use a 
-    weighted linear regression from the statsmodels package (weights are the 
-    water concentrations). 
-    
-    df: pandas.DataFrame. 
-        WISPER measurements. 
-    
-    iso: str.
-        The isotope to get cross-cal formula for (either 'dD' or 'd18O'). 
-        
-    nord: is 3-tuple of ints. 
-        The highest power to include for each of the predictor variables logq, 
-        isotope-ratio, and their crossterm (in that order).
-    """
-    # Pandas df of predictor vars:
-    interterm = np.log(df['h2o_tot2'])*df[iso+'_tot2'] # Interaction term.
-    predictvars = pd.DataFrame({'logq':np.log(df['h2o_tot2']),
-                                iso:df[iso+'_tot2'],
-                                'logq*'+iso:interterm})
-    
-    # Get all desired powers of each predictor var; add as new df columns:
-    pwr_range = {'logq':(0,nord[0]), iso:(0,nord[1]), 
-                 'logq*'+iso:(0,nord[2])}
-    predictvars_poly = get_poly_terms(predictvars, pwr_range)
-    
-    # Return model fit:
-    return sm.WLS(df[iso+'_tot1'], predictvars_poly, missing='drop', 
-                      weights=df['h2o_tot2']).fit()
-
-    
-def model_isoxcal(predvars, pars):
-    """
-    The isotope cross-calibration model (results of the polynomial fit). Takes 
-    in model parameters and data for the predictor variables (logq, iso, 
-    logq*iso), and returns calibrated isotope ratios. iso is either 'dD' or 
-    'd18O'.
-    
-    predvars: dict-like.
-        Contains values of the predictor vars (arrays of same length).
-        
-    pars: (dict-like). 
-        Fit parameters. The dict keys need to be of the form 'var^n' where n 
-        is the power of the term in the model and 'var' is the key for the 
-        appropriate variable in 'data'.
-    """
-    terms = []
-    
-    for k in pars.keys():
-        if k=='const':
-            terms.append(pars[k]*np.ones(np.shape(predvars[list(predvars.keys())[0]])))
-        else:
-            pvar, power = k.split('^') # Predictor var name and power it's raised to.
-            terms.append(pars[k]*predvars[pvar]**int(power))
-    
-    return np.sum(terms, axis=0)
-
 
 def model_residual_map(iso, wisperdata, pars, logq_grid, iso_grid, ffact=1):
     """
@@ -230,7 +131,7 @@ def model_residual_map(iso, wisperdata, pars, logq_grid, iso_grid, ffact=1):
                      iso:wisperdata[iso+'_tot2'].values, 
                      'logq*'+iso:logq*wisperdata[iso+'_tot2'].values, 
                      }
-    modelresults = model_isoxcal(predictorvars, pars)
+    modelresults = isoxcal_model.predict(predictorvars, pars)
     # Model residuals:
     res = abs(modelresults - wisperdata[iso+'_tot1'])
     # Get RMSE 2d map using oversampling:
@@ -292,8 +193,8 @@ def draw_fitfig(year, wisperdata, pars_dD, pars_d18O):
                      }
 
         # Run model:
-    modeldata_dD = model_isoxcal(predictorvars, pars_dD)
-    modeldata_d18O = model_isoxcal(predictorvars, pars_d18O)
+    modeldata_dD = isoxcal_model.predict(predictorvars, pars_dD)
+    modeldata_d18O = isoxcal_model.predict(predictorvars, pars_d18O)
     
         # Contour plots of model output:
     ax_D.contour(logq_grid, dD_grid, modeldata_dD, 
@@ -373,8 +274,7 @@ def get_fits_singleyear(year, wisperdata):
 
     ## Fitting humidity is straightforward:
     ##-----------------
-    #model_q = qxcal_modelfit(wisperdata) # Returned as statsmodels results object
-    model_q = qxcal_model.modelfit(wisperdata, 'h2o_tot1', 'h2o_tot2')
+    model_q = qxcal_model.fit(wisperdata, 'h2o_tot1', 'h2o_tot2')
     #print(model_q.summary())
     print('q\n===')
     print('R2 = %f' % model_q.rsquared)
@@ -394,7 +294,7 @@ def get_fits_singleyear(year, wisperdata):
         nord_list = list(itertools.product(range(1,6), range(1,6), range(1,6)))
         bic_list = []
         for nord in nord_list:
-            model = isoxcal_modelfit(wisperdata, iso, nord) # Statsmodels results.
+            model = isoxcal_model.fit(wisperdata, iso, nord) # Statsmodels results.
             bic_list.append(model.bic) # Append this run's BIC.
         # Combo of poly orders with the minimum BIC:
         return nord_list[np.argmin(bic_list)]
@@ -403,8 +303,8 @@ def get_fits_singleyear(year, wisperdata):
     # those poly orders:
     nord_dD = polyord_minBIC(wisperdata, 'dD')
     nord_d18O = polyord_minBIC(wisperdata, 'd18O')
-    model_dD = isoxcal_modelfit(wisperdata, 'dD', nord_dD)
-    model_d18O = isoxcal_modelfit(wisperdata, 'd18O', nord_d18O)
+    model_dD = isoxcal_model.fit(wisperdata, 'dD', nord_dD)
+    model_d18O = isoxcal_model.fit(wisperdata, 'd18O', nord_d18O)
     
     #print(model_dD.summary())
     #print(model_d18O.summary())
