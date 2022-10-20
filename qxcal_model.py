@@ -11,7 +11,7 @@ Model fit parameters for vapor concentration of sensor 2 vs sensor 1.
 import statsmodels.api as sm # 0.12.0
 
 
-def modelfit(df, k_s1, k_s2):
+def modelfit(data, k_s1, k_s2):
     """    
     Model is a simple linear relationship of sensor 1 measurements as a 
     function of sensor 2. Line is constrained to pass through the origin. 
@@ -19,9 +19,9 @@ def modelfit(df, k_s1, k_s2):
     Inputs
     ------
     data: pandas.Dataframe 
-        Contains sensor measurements.
+        Sensor measurements.
     k_s1, k_s2: str's
         Dataframe keys for sensor 1 and 2, respectively.
     
     """
-    return sm.OLS(df[k_s1], df[k_s2], missing='drop').fit()
+    return sm.OLS(data[k_s1], data[k_s2], missing='drop').fit()
