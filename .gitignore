@@ -2,3 +2,4 @@ sensor_data/*
 *.png
 *.csv
 wisper_oracles_pic1cal.py
+__pycache__/*
