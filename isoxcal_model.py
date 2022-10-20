@@ -14,7 +14,7 @@ import statsmodels.api as sm # 0.12.0
 
     
 
-def isoxcal_modelfit(data, iso, nord):
+def fit(data, iso, nord):
     """
     Determine polynomial fit for isotope ratio cross-calibration data.
     
@@ -50,7 +50,7 @@ def isoxcal_modelfit(data, iso, nord):
 
     
 
-def model_isoxcal(predvars, pars):
+def predict(predvars, pars):
     """
     The isotope cross-calibration model (results of the polynomial fit). Takes 
     in model parameters and data for the predictor variables (logq, iso, 
