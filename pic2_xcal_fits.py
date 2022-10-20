@@ -73,7 +73,17 @@ import statsmodels.api as sm # 0.12.0
 
 # My modules:
 import oversampler
-import wisper_oracles_pic1cal as pic1cal
+#import wisper_oracles_pic1cal as pic1cal
+
+
+
+# ORACLES flight dates where WISPER took good data:
+dates2017_good = ['20170812','20170813','20170815','20170817','20170818',
+                  '20170821','20170824','20170826','20170828','20170830',
+                  '20170831','20170902']
+dates2018_good = ['20180927','20180930','20181003','20181007','20181010',
+                  '20181012','20181015','20181017','20181019','20181021',
+                  '20181023']
 
 
 def get_wisperdata(year):
@@ -86,11 +96,14 @@ def get_wisperdata(year):
     """
     # Get paths to all data files for the input year:
     if year=='2017':
-        dates_good = pic1cal.dates2017_good
+        #dates_good = pic1cal.dates2017_good
+        dates_good = dates2017_good
     elif year=='2018':
-        dates_good = pic1cal.dates2018_good
+        #dates_good = pic1cal.dates2018_good
+        dates_good = dates2018_good
  
-    path_data_dir = pic1cal.path_pic1caldir # directory with data files.
+    path_data_dir = r"./sensor_data/"   
+    #path_data_dir = pic1cal.path_pic1caldir # directory with data files.
     fnames = ['WISPER_pic1cal_%s.ict' % d for d in dates_good]
     paths_data = [path_data_dir+f for f in fnames]
     
@@ -407,11 +420,13 @@ def get_fits_singleyear(year, wisperdata):
     return {'q':model_q.params, 'dD':model_dD.params, 'd18O':model_d18O.params}
 
 
+
 def get_fits():
     """
     Get cross-calibration formula fit parameters for water concentration and 
     both isotopologues for both the 2017 and 2018 ORACLES years.
     """  
+    """
     ## Check that all WISPER files with calibrated Pic1 data are in the 
     ## necessary directory, otherwise run calibration script to get them:
     ##-----------------        
@@ -430,7 +445,7 @@ def get_fits():
         else:
             pic1cal.calibrate_20172018_file(datesall_good[i])
     print("All files now exist, good to start cross-calibration fits.")
-        
+    """    
     
     ## Fit parameters for each year:
     ##-----------------
@@ -461,7 +476,7 @@ def get_fits():
     isoratio_xcal_to_csv(fitparams_2017['d18O'], "d18O_xcal_results_2017.csv")
     isoratio_xcal_to_csv(fitparams_2018['dD'], "dD_xcal_results_2018.csv")
     isoratio_xcal_to_csv(fitparams_2018['d18O'], "d18O_xcal_results_2018.csv")
-
+    
 
 if __name__ == '__main__':
     get_fits()
