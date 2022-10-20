@@ -73,6 +73,7 @@ import statsmodels.api as sm # 0.12.0
 
 # My modules:
 import oversampler
+import qxcal_model
 #import wisper_oracles_pic1cal as pic1cal
 
 
@@ -122,12 +123,12 @@ def get_wisperdata(year):
     return wisper.dropna(how='any') # Drop missing values
 
 
-def qxcal_modelfit(df):
-    """
-    Fit a line to Pic1 vs Pic2 vapor concentration. Line is constrained to pass
-    through the origin. 'df' is the pandas dataframe of wisper measurements.
-    """
-    return sm.OLS(df['h2o_tot1'], df['h2o_tot2'], missing='drop').fit()
+#def qxcal_modelfit(df):
+#    """
+#    Fit a line to Pic1 vs Pic2 vapor concentration. Line is constrained to pass
+#    through the origin. 'df' is the pandas dataframe of wisper measurements.
+#    """
+#    return sm.OLS(df['h2o_tot1'], df['h2o_tot2'], missing='drop').fit()
     
     
 def get_poly_terms(predictvars, pwr_range):
@@ -372,7 +373,8 @@ def get_fits_singleyear(year, wisperdata):
 
     ## Fitting humidity is straightforward:
     ##-----------------
-    model_q = qxcal_modelfit(wisperdata) # Returned as statsmodels results object
+    #model_q = qxcal_modelfit(wisperdata) # Returned as statsmodels results object
+    model_q = qxcal_model.modelfit(wisperdata, 'h2o_tot1', 'h2o_tot2')
     #print(model_q.summary())
     print('q\n===')
     print('R2 = %f' % model_q.rsquared)
