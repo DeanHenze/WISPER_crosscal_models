@@ -9,3 +9,6 @@ instruments do not have calibration information and must be cross-calibrated to 
 
 Using two sensor features (time series) and their cross-term, a polynomial regression model between pairs of intruments were 
 tuned, acheiving 70% improvement in RMS error between sensors. 
+
+
+![Model assessment](https://github.com/DeanHenze/WISPER_crosscal_models/blob/main/figure_model_assessment.png)
