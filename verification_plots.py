@@ -92,8 +92,8 @@ def scatter_with_modelfit(year, wisperdata, pars_dD, pars_d18O):
     if year=='2018': 
         reslevs_D = [1,2,5,10,20]; reslevs_18O = [0.2,0.5,1,2]; ffact=4
     
-    res_dD = model_residual_map('dD', wisperdata, pars_dD, logq, dD_grid[:,0], ffact=ffact)  
-    res_d18O = model_residual_map('d18O', wisperdata, pars_d18O, logq, d18O_grid[:,0], ffact=ffact)  
+    res_dD = model_residual_map('dD', wisperdata, pars_dD, logq_grid, dD_grid, ffact=ffact)  
+    res_d18O = model_residual_map('d18O', wisperdata, pars_d18O, logq_grid, d18O_grid, ffact=ffact)  
         
         # Contours:
     rescont_D = ax_D.contour(logq_grid, dD_grid, res_dD, 
@@ -134,26 +134,77 @@ def scatter_with_modelfit(year, wisperdata, pars_dD, pars_d18O):
     
     fig.savefig("pic2_isoratio_xcal_fitresults_%s.png" % year)
     
+
+
+def residuals_figure(year, wisperdata, iso, pars, axes):
+    """
+    Publication read figure. Colored scatter plot of cross-calibration data 
+    and 2D colored-contour maps of the polynomial fit, for both dD and d18O. 
+    Figures are saved in this folder.
+    """
     
-   
-def model_residual_map(iso, wisperdata, pars, logq_grid, iso_grid, ffact=1):
-    """
-    Returns a 2D, q-dD map of residuals for an isotope cross calibration. 
-    """
+    logq = np.log(wisperdata['h2o_tot2'].values)
+
     
     # Get model predictions:
-    logq = np.log(wisperdata['h2o_tot2'].values)
     predictorvars = {'logq':logq, 
                      iso:wisperdata[iso+'_tot2'].values, 
                      'logq*'+iso:logq*wisperdata[iso+'_tot2'].values, 
                      }
     modelresults = isoxcal_model.predict(predictorvars, pars)
-    # Model residuals:
-    res = abs(modelresults - wisperdata[iso+'_tot1'])
-    # Get RMSE 2d map using oversampling:
-    return oversampler.oversampler(res, logq, wisperdata[iso+'_tot2'], 
-                                   logq_grid, iso_grid, ffact=ffact)
+    res1_dD = wisperdata[iso+'_tot1'].values - wisperdata[iso+'_tot2'].values
+    res2_dD = wisperdata[iso+'_tot1'].values - modelresults
+    
+    axes[0].scatter(wisperdata[iso+'_tot2'], wisperdata[iso+'_tot1'], 
+                    s=2, label='before cal')
+    axes[0].scatter(modelresults, wisperdata[iso+'_tot1'], 
+                    s=2, label='after cal')
+    
+    
+    axes[1].hist(res1_dD - np.mean(res1_dD), 
+                 bins=200, histtype='step', label='before cal')
+    axes[1].hist(res2_dD - np.mean(res2_dD), 
+                 bins=200, histtype='step', label='after cal')
+    axes[1].set_yscale('log')
+    
+    
+    # draw 1-1 line on scatter plot:
+    axes[0].plot((min(modelresults), max(modelresults)), 
+                 (min(modelresults), max(modelresults)), 
+                 color='black', label='1-1'
+                 )
+    
+    axes[0].legend(loc='upper left', markerscale=3)
+    axes[0].set_xlabel('sensor 2 output', fontsize=12)
+    axes[0].set_ylabel('sensor 1 output', fontsize=12)
+    axes[1].set_xlabel('residuals', fontsize=12)
+    axes[1].set_ylabel('counts', fontsize=12)
+    
+    
+    # Compute some fit metrics:
+    rmse1 = np.nanmean(res1_dD**2)**0.5
+    rmse2 = np.nanmean(res2_dD**2)**0.5
+    print(100*(rmse1-rmse2)/rmse1)
+    print(np.nanmean((res1_dD - np.nanmean(res1_dD))**2)**0.5)
+    print(np.nanmean((res2_dD - np.nanmean(res2_dD))**2)**0.5)
+   
+    
 
+def model_residual_map(iso, wisperdata, pars, logq_grid, deliso_grid, ffact=1):
+    """
+    Returns a 2D, q-dD map of residuals for an isotope cross calibration. 
+    """
+    # Get model residuals:
+    res = model_residuals(iso, wisperdata, pars)
+    
+    # RMSE 2d map:
+    return rmse_map(
+        res, np.log(wisperdata['h2o_tot2'].values), 
+        wisperdata[iso+'_tot2'].values, 
+        logq_grid, deliso_grid, ffact=ffact
+        )
+
+    
     
 
 def rmse_map(res, logq, deliso, logq_grid, deliso_grid, ffact=1):
@@ -163,9 +214,10 @@ def rmse_map(res, logq, deliso, logq_grid, deliso_grid, ffact=1):
     
     # Get RMSE 2d map using oversampling:
     mse = oversampler.oversampler(res**2, logq, deliso, 
-                                  logq_grid, deliso_grid, ffact=ffact) 
+                                  logq_grid[0,:], deliso_grid[:,0], ffact=ffact) 
     rmse = mse**0.5
     return rmse
+
 
 
 def model_residuals(iso, wisperdata, pars):
@@ -181,18 +233,21 @@ def model_residuals(iso, wisperdata, pars):
                      }
     modelresults = isoxcal_model.predict(predictorvars, pars)
     # Model residuals:
-    res = abs(modelresults - wisperdata[iso+'_tot1'])
+    res = modelresults - wisperdata[iso+'_tot1']
     return res
     
 
 
-year = '2018'
+year = '2017'
 
 wisperdata = pic2_xcal_fits.get_wisperdata(year)
 
-pars_dD = pd.read_csv("dD_xcal_results_%s.csv" % year, index_col='predictor_var')
-pars_dD = pars_dD.squeeze()
-pars_d18O = pd.read_csv("d18O_xcal_results_%s.csv" % year, index_col='predictor_var')
-pars_d18O = pars_d18O.squeeze()
+for iso in ['dD', 'd18O']:
+    
+    pars = pd.read_csv(iso+"_xcal_results_%s.csv" % year, index_col='predictor_var')
+    pars = pars.squeeze()
 
-scatter_with_modelfit(year, wisperdata, pars_dD, pars_d18O)
+    #scatter_with_modelfit(year, wisperdata, pars_dD, pars_d18O)
+    fig, axes = plt.subplots(1, 2, figsize=(6.5, 3), tight_layout=True)
+    residuals_figure(year, wisperdata, iso, pars, axes)
+    fig.savefig('figure_model_assessment.png')

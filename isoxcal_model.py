@@ -53,7 +53,7 @@ def fit(data, iso, nord):
     # Return model fit:
     model = sm.WLS(
         data[iso+'_tot1'], predictvars_poly, 
-        missing='drop', weights=data['h2o_tot2']
+        missing='drop',# weights=data['h2o_tot2']
         )
     return model.fit()
 
