@@ -23,6 +23,8 @@ def fit(data, iso, nord):
     weighted linear regression from the statsmodels package (weights are the 
     water concentrations). 
     
+    Inputs
+    ------
     data: pandas.DataFrame. 
         Sensor measurements. 
     
@@ -32,6 +34,10 @@ def fit(data, iso, nord):
     nord: is 3-tuple of ints. 
         The highest power to include for each of the predictor variables logq, 
         isotope-ratio, and their crossterm (in that order).
+        
+    Returns
+    -------
+    A statsmodels RegressionResults object (model parameters and fit metrics).
     """
     # Pandas df of predictor vars:
     interterm = np.log(data['h2o_tot2'])*data[iso+'_tot2'] # Interaction term.
@@ -45,8 +51,11 @@ def fit(data, iso, nord):
     predictvars_poly = get_poly_terms(predictvars, pwr_range)
     
     # Return model fit:
-    return sm.WLS(data[iso+'_tot1'], predictvars_poly, missing='drop', 
-                      weights=data['h2o_tot2']).fit()
+    model = sm.WLS(
+        data[iso+'_tot1'], predictvars_poly, 
+        missing='drop', weights=data['h2o_tot2']
+        )
+    return model.fit()
 
     
 

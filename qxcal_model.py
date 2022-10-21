@@ -22,6 +22,9 @@ def fit(data, k_s1, k_s2):
         Sensor measurements.
     k_s1, k_s2: str's
         Dataframe keys for sensor 1 and 2, respectively.
-    
+        
+    Returns
+    -------
+    A statsmodels RegressionResults object (model parameters and fit metrics).
     """
     return sm.OLS(data[k_s1], data[k_s2], missing='drop').fit()
