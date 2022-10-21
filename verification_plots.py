@@ -94,7 +94,7 @@ def scatter_with_modelfit(year, wisperdata, pars_dD, pars_d18O):
     
     res_dD = model_residual_map('dD', wisperdata, pars_dD, logq, dD_grid[:,0], ffact=ffact)  
     res_d18O = model_residual_map('d18O', wisperdata, pars_d18O, logq, d18O_grid[:,0], ffact=ffact)  
-    
+        
         # Contours:
     rescont_D = ax_D.contour(logq_grid, dD_grid, res_dD, 
                              levels=reslevs_D, colors='black', linewidths=1)
@@ -135,11 +135,12 @@ def scatter_with_modelfit(year, wisperdata, pars_dD, pars_d18O):
     fig.savefig("pic2_isoratio_xcal_fitresults_%s.png" % year)
     
     
-    
+   
 def model_residual_map(iso, wisperdata, pars, logq_grid, iso_grid, ffact=1):
     """
     Returns a 2D, q-dD map of residuals for an isotope cross calibration. 
     """
+    
     # Get model predictions:
     logq = np.log(wisperdata['h2o_tot2'].values)
     predictorvars = {'logq':logq, 
@@ -151,7 +152,38 @@ def model_residual_map(iso, wisperdata, pars, logq_grid, iso_grid, ffact=1):
     res = abs(modelresults - wisperdata[iso+'_tot1'])
     # Get RMSE 2d map using oversampling:
     return oversampler.oversampler(res, logq, wisperdata[iso+'_tot2'], 
-                                   logq_grid, iso_grid, ffact=ffact)   
+                                   logq_grid, iso_grid, ffact=ffact)
+
+    
+
+def rmse_map(res, logq, deliso, logq_grid, deliso_grid, ffact=1):
+    """
+    Returns a 2D map of RMSE for an isotope cross calibration. 
+    """
+    
+    # Get RMSE 2d map using oversampling:
+    mse = oversampler.oversampler(res**2, logq, deliso, 
+                                  logq_grid, deliso_grid, ffact=ffact) 
+    rmse = mse**0.5
+    return rmse
+
+
+def model_residuals(iso, wisperdata, pars):
+    """
+    Model residuals from the isotope cross-calibration model predictions. 
+    """
+    
+    # Get model predictions:
+    logq = np.log(wisperdata['h2o_tot2'].values)
+    predictorvars = {'logq':logq, 
+                     iso:wisperdata[iso+'_tot2'].values, 
+                     'logq*'+iso:logq*wisperdata[iso+'_tot2'].values, 
+                     }
+    modelresults = isoxcal_model.predict(predictorvars, pars)
+    # Model residuals:
+    res = abs(modelresults - wisperdata[iso+'_tot1'])
+    return res
+    
 
 
 year = '2018'
