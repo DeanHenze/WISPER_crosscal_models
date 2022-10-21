@@ -12,4 +12,4 @@ tuned, acheiving 70% improvement in RMS error between sensors.
 
 ![Model assessment](https://github.com/DeanHenze/WISPER_crosscal_models/blob/main/figure_model_assessment.png)
 
-$\Sigma_{i}^{n1}c_{1i}f1^{i}$
+$\Sigma_{i}^{n1}[c_{1i}x_{1}^{i}]$
