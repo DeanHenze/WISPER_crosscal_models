@@ -175,9 +175,9 @@ def residuals_figure(year, wisperdata, iso, pars, axes):
                  )
     
     axes[0].legend(loc='upper left', markerscale=3)
-    axes[0].set_xlabel('sensor 2 output', fontsize=12)
-    axes[0].set_ylabel('sensor 1 output', fontsize=12)
-    axes[1].set_xlabel('residuals', fontsize=12)
+    axes[0].set_xlabel(r'sensor 2 output '+u'(\u2030)', fontsize=12)
+    axes[0].set_ylabel('sensor 1 output '+u'(\u2030)', fontsize=12)
+    axes[1].set_xlabel('residuals '+u'(\u2030)', fontsize=12)
     axes[1].set_ylabel('counts', fontsize=12)
     
     
